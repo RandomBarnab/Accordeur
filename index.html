@@ -1,0 +1,643 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#f7f1ec">
+  <title>Accordeur guitare</title>
+  <style>
+    :root {
+      --paper: #f7f1ec;
+      --paper-deep: #eee4dc;
+      --ink: #3e4048;
+      --muted: #8b8583;
+      --rose: #efd6d8;
+      --rose-deep: #c98f99;
+      --mint: #dcebe5;
+      --mint-deep: #77a99d;
+      --cream: #f7e8bf;
+      --cream-deep: #caa968;
+      --line: rgba(62, 64, 72, .11);
+      --shadow: 0 18px 50px rgba(105, 82, 75, .12);
+      --garamond: "Garamond", "EB Garamond", "Baskerville", "Times New Roman", serif;
+      --sans: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body { min-height: 100%; }
+
+    body {
+      margin: 0;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 8% 7%, rgba(239, 214, 216, .72), transparent 26%),
+        radial-gradient(circle at 94% 24%, rgba(220, 235, 229, .85), transparent 26%),
+        linear-gradient(150deg, #faf6f2 0%, var(--paper) 55%, #f5eee8 100%);
+      font-family: var(--garamond);
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+    }
+
+    button { font: inherit; }
+
+    .app-shell {
+      width: min(100%, 460px);
+      min-height: 100svh;
+      margin: 0 auto;
+      padding: max(14px, env(safe-area-inset-top)) 20px max(30px, env(safe-area-inset-bottom));
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .tuner-card {
+      position: relative;
+      overflow: hidden;
+      padding: 23px 17px 18px;
+      border: 1px solid rgba(62,64,72,.08);
+      border-radius: 32px;
+      background: rgba(255,255,255,.55);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(16px);
+    }
+
+    .tuner-card::before {
+      content: "";
+      position: absolute;
+      width: 180px;
+      height: 180px;
+      top: -110px;
+      right: -55px;
+      border-radius: 50%;
+      background: var(--mint);
+      opacity: .8;
+    }
+
+    .tuner-head {
+      position: relative;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      padding: 0 4px;
+    }
+    .target-label {
+      color: var(--muted);
+      font-family: var(--garamond);
+      font-size: 11px;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+    .target-name {
+      margin-top: 4px;
+      font-size: 24px;
+    }
+    .hz {
+      display: inline-block;
+      padding: 5px 8px 6px;
+      border-radius: 10px;
+      color: var(--ink);
+      background: rgba(255,255,255,.58);
+      font-family: var(--garamond);
+      font-size: 15px;
+      font-weight: 600;
+      letter-spacing: .01em;
+    }
+
+    .dial {
+      position: relative;
+      width: min(76vw, 300px);
+      aspect-ratio: 1;
+      margin: 4px auto 1px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 50% 55%, rgba(255,255,255,.85), rgba(250,244,239,.35) 61%, transparent 62%);
+    }
+
+    .dial::before {
+      content: "";
+      position: absolute;
+      inset: 11%;
+      border: 1px solid rgba(62,64,72,.09);
+      border-radius: 50%;
+    }
+
+    .ticks {
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      background: repeating-conic-gradient(
+        from 319deg,
+        transparent 0deg 6deg,
+        rgba(62,64,72,.36) 6deg 7deg,
+        transparent 7deg 12deg
+      );
+      -webkit-mask-image:
+        radial-gradient(transparent 0 68%, #000 68.5% 70%, transparent 70.5%),
+        conic-gradient(from 319deg, #000 0deg 82deg, transparent 82deg 360deg);
+      -webkit-mask-composite: source-in;
+      mask-image:
+        radial-gradient(transparent 0 68%, #000 68.5% 70%, transparent 70.5%),
+        conic-gradient(from 319deg, #000 0deg 82deg, transparent 82deg 360deg);
+      mask-composite: intersect;
+      opacity: .72;
+    }
+
+    .dial-label {
+      position: absolute;
+      top: 22%;
+      left: 50%;
+      translate: -50% 0;
+      color: var(--muted);
+      font-family: var(--garamond);
+      font-size: 10px;
+      letter-spacing: .15em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+    .dial-label.left { top: 47%; left: 14%; translate: 0 -50%; }
+    .dial-label.right { top: 47%; left: auto; right: 14%; translate: 0 -50%; }
+
+    .needle {
+      position: absolute;
+      left: 50%;
+      bottom: 21%;
+      width: 2px;
+      height: 36%;
+      transform-origin: 50% 100%;
+      transform: translateX(-50%) rotate(0deg);
+      transition: transform .18s ease-out;
+      z-index: 3;
+    }
+    .needle::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 50%;
+      width: 2px;
+      height: 100%;
+      translate: -50% 0;
+      border-radius: 99px;
+      background: var(--rose-deep);
+      box-shadow: 0 4px 10px rgba(201,143,153,.3);
+    }
+    .needle::after {
+      content: "";
+      position: absolute;
+      bottom: -5px;
+      left: 50%;
+      width: 12px;
+      height: 12px;
+      translate: -50% 0;
+      border-radius: 50%;
+      background: var(--rose-deep);
+      box-shadow: 0 2px 7px rgba(201,143,153,.35);
+    }
+
+    .dial-center {
+      position: absolute;
+      left: 50%;
+      bottom: 17%;
+      width: 48px;
+      height: 48px;
+      display: grid;
+      place-items: center;
+      translate: -50% 0;
+      border: 1px solid rgba(62,64,72,.1);
+      border-radius: 50%;
+      background: rgba(255,255,255,.72);
+      color: var(--ink);
+      font-size: 19px;
+      z-index: 4;
+    }
+
+    .reading {
+      position: relative;
+      display: flex;
+      align-items: baseline;
+      justify-content: center;
+      gap: 8px;
+      min-height: 54px;
+    }
+    .reading-value { font-size: 47px; line-height: 1; }
+    .reading-unit { color: var(--muted); font-family: var(--garamond); font-size: 13px; }
+    .note-state {
+      position: relative;
+      margin-top: 4px;
+      color: var(--muted);
+      font-size: 17px;
+      text-align: center;
+    }
+    .note-state strong { color: var(--mint-deep); font-weight: 400; }
+
+    .start-button {
+      position: relative;
+      width: 100%;
+      margin-top: 16px;
+      padding: 15px 20px;
+      border: 0;
+      border-radius: 16px;
+      color: #fffaf8;
+      background: var(--ink);
+      box-shadow: 0 10px 20px rgba(62,64,72,.15);
+      cursor: pointer;
+      font-family: var(--garamond);
+      font-size: 14px;
+      font-weight: 600;
+      letter-spacing: .05em;
+      transition: transform .18s ease, background .18s ease;
+    }
+    .start-button:hover { transform: translateY(-1px); }
+    .start-button:active { transform: translateY(1px); }
+    .start-button.stop { background: var(--rose-deep); }
+
+    .section-heading {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 4px;
+    }
+    .section-heading h2 {
+      margin: 0;
+      font-size: 22px;
+      font-weight: 400;
+    }
+    .section-heading span {
+      color: var(--muted);
+      font-family: var(--garamond);
+      font-size: 11px;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+    }
+
+    .strings {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 9px;
+    }
+    .string-button {
+      min-height: 73px;
+      padding: 10px 8px;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      color: var(--ink);
+      background: rgba(255,255,255,.44);
+      cursor: pointer;
+      text-align: left;
+      transition: background .2s ease, border-color .2s ease, transform .2s ease;
+    }
+    .string-button:hover { transform: translateY(-1px); }
+    .string-button.active {
+      border-color: transparent;
+      background: var(--mint);
+      box-shadow: 0 7px 15px rgba(119,169,157,.12);
+    }
+    .string-index {
+      display: block;
+      color: var(--muted);
+      font-family: var(--garamond);
+      font-size: 10px;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+    }
+    .string-note {
+      display: block;
+      margin-top: 4px;
+      font-size: 25px;
+      line-height: 1;
+    }
+    .string-hz {
+      display: block;
+      margin-top: 4px;
+      color: var(--muted);
+      font-family: var(--garamond);
+      font-size: 11px;
+    }
+
+    .tip {
+      display: flex;
+      gap: 13px;
+      align-items: flex-start;
+      padding: 15px 16px;
+      border-radius: 19px;
+      background: var(--cream);
+    }
+    .tip-icon { font-size: 18px; line-height: 1; }
+    .tip p { margin: 0; color: #76664e; font-size: 15px; line-height: 1.25; }
+    .tip strong { font-weight: 400; color: #5e503c; }
+
+    .footer-note {
+      margin: auto 0 0;
+      padding-top: 2px;
+      color: rgba(139,133,131,.8);
+      font-family: var(--garamond);
+      font-size: 9px;
+      letter-spacing: .07em;
+      line-height: 1.5;
+      text-align: center;
+    }
+
+    @media (min-width: 500px) {
+      body { padding: 22px 0; }
+      .app-shell { min-height: calc(100svh - 44px); }
+    }
+  </style>
+</head>
+<body>
+  <main class="app-shell">
+    <section class="tuner-card" aria-label="Accordeur">
+      <div class="tuner-head">
+        <div>
+          <div class="target-label">Corde sélectionnée</div>
+          <div id="targetName" class="target-name">Mode automatique</div>
+        </div>
+        <div id="frequency" class="hz">440 Hz</div>
+      </div>
+
+      <div class="dial" aria-label="Aiguille d’accordage">
+        <div class="ticks" aria-hidden="true"></div>
+        <span class="dial-label">juste</span>
+        <span class="dial-label left">grave</span>
+        <span class="dial-label right">aigu</span>
+        <div id="needle" class="needle"></div>
+        <div id="dialCenter" class="dial-center">—</div>
+      </div>
+
+      <div class="reading">
+        <span id="centsValue" class="reading-value">0</span>
+        <span class="reading-unit">cents</span>
+      </div>
+      <div id="noteState" class="note-state">Appuyez sur <strong>Démarrer</strong> pour commencer</div>
+      <button id="startButton" class="start-button" type="button">Autoriser le microphone</button>
+    </section>
+
+    <section aria-labelledby="strings-title">
+      <div class="section-heading">
+        <h2 id="strings-title">Choisir une corde</h2>
+        <span>Accordage standard</span>
+      </div>
+      <div class="strings" style="margin-top: 11px;">
+        <button class="string-button active" data-index="auto" data-note="Auto" type="button">
+          <span class="string-index">Toutes</span>
+          <span class="string-note">Auto</span>
+          <span class="string-hz">détection libre</span>
+        </button>
+        <button class="string-button" data-index="6" data-note="E2" data-frequency="82.41" type="button">
+          <span class="string-index">6e corde</span>
+          <span class="string-note">Mi</span>
+          <span class="string-hz">E2 · 82,41 Hz</span>
+        </button>
+        <button class="string-button" data-index="5" data-note="A2" data-frequency="110.00" type="button">
+          <span class="string-index">5e corde</span>
+          <span class="string-note">La</span>
+          <span class="string-hz">A2 · 110 Hz</span>
+        </button>
+        <button class="string-button" data-index="4" data-note="D3" data-frequency="146.83" type="button">
+          <span class="string-index">4e corde</span>
+          <span class="string-note">Ré</span>
+          <span class="string-hz">D3 · 146,83 Hz</span>
+        </button>
+        <button class="string-button" data-index="3" data-note="G3" data-frequency="196.00" type="button">
+          <span class="string-index">3e corde</span>
+          <span class="string-note">Sol</span>
+          <span class="string-hz">G3 · 196 Hz</span>
+        </button>
+        <button class="string-button" data-index="2" data-note="B3" data-frequency="246.94" type="button">
+          <span class="string-index">2e corde</span>
+          <span class="string-note">Si</span>
+          <span class="string-hz">B3 · 246,94 Hz</span>
+        </button>
+        <button class="string-button" data-index="1" data-note="E4" data-frequency="329.63" type="button">
+          <span class="string-index">1re corde</span>
+          <span class="string-note">Mi</span>
+          <span class="string-hz">E4 · 329,63 Hz</span>
+        </button>
+      </div>
+    </section>
+
+    <aside class="tip">
+      <div class="tip-icon" aria-hidden="true">✦</div>
+      <p><strong>Conseil :</strong> pincez la corde près de la rosace, puis attendez que l’aiguille se stabilise au centre.</p>
+    </aside>
+
+    <p class="footer-note">Le microphone reste actif uniquement pendant l’accordage.</p>
+  </main>
+
+  <script>
+    const NOTE_NAMES = ['C', 'C♯', 'D', 'D♯', 'E', 'F', 'F♯', 'G', 'G♯', 'A', 'A♯', 'B'];
+    const FRENCH_NAMES = { C: 'Do', 'C♯': 'Do♯', D: 'Ré', 'D♯': 'Ré♯', E: 'Mi', F: 'Fa', 'F♯': 'Fa♯', G: 'Sol', 'G♯': 'Sol♯', A: 'La', 'A♯': 'La♯', B: 'Si' };
+    const STANDARD = {
+      E2: { note: 'E2', frequency: 82.41, label: 'Mi grave', string: '6e corde' },
+      A2: { note: 'A2', frequency: 110.00, label: 'La', string: '5e corde' },
+      D3: { note: 'D3', frequency: 146.83, label: 'Ré', string: '4e corde' },
+      G3: { note: 'G3', frequency: 196.00, label: 'Sol', string: '3e corde' },
+      B3: { note: 'B3', frequency: 246.94, label: 'Si', string: '2e corde' },
+      E4: { note: 'E4', frequency: 329.63, label: 'Mi aigu', string: '1re corde' }
+    };
+
+    const startButton = document.getElementById('startButton');
+    const statusPill = document.getElementById('statusPill');
+    const statusText = document.getElementById('statusText');
+    const needle = document.getElementById('needle');
+    const dialCenter = document.getElementById('dialCenter');
+    const centsValue = document.getElementById('centsValue');
+    const noteState = document.getElementById('noteState');
+    const frequencyLabel = document.getElementById('frequency');
+    const targetName = document.getElementById('targetName');
+    const stringButtons = [...document.querySelectorAll('.string-button')];
+
+    let audioContext = null;
+    let analyser = null;
+    let microphone = null;
+    let animationFrame = null;
+    let isListening = false;
+    let targetKey = 'auto';
+
+    function frequencyToNote(frequency) {
+      const midi = 69 + 12 * Math.log2(frequency / 440);
+      const roundedMidi = Math.round(midi);
+      const cents = Math.round((midi - roundedMidi) * 100);
+      const octave = Math.floor(roundedMidi / 12) - 1;
+      const name = NOTE_NAMES[(roundedMidi % 12 + 12) % 12];
+      return { name, note: `${name}${octave}`, octave, cents, midi: roundedMidi };
+    }
+
+    function noteToFrequency(note) {
+      const match = note.match(/^([A-G](?:♯)?)(-?\d+)$/);
+      if (!match) return null;
+      const index = NOTE_NAMES.indexOf(match[1]);
+      const midi = (Number(match[2]) + 1) * 12 + index;
+      return 440 * Math.pow(2, (midi - 69) / 12);
+    }
+
+    function detectPitch(buffer, sampleRate) {
+      let rms = 0;
+      for (let i = 0; i < buffer.length; i++) rms += buffer[i] * buffer[i];
+      rms = Math.sqrt(rms / buffer.length);
+      if (rms < 0.012) return null;
+
+      const minFrequency = 55;
+      const maxFrequency = 700;
+      const minLag = Math.floor(sampleRate / maxFrequency);
+      const maxLag = Math.min(Math.floor(sampleRate / minFrequency), buffer.length - 2);
+      let bestLag = -1;
+      let bestCorrelation = 0;
+
+      for (let lag = minLag; lag <= maxLag; lag++) {
+        let sum = 0;
+        let normA = 0;
+        let normB = 0;
+        const limit = buffer.length - lag;
+        for (let i = 0; i < limit; i++) {
+          const a = buffer[i];
+          const b = buffer[i + lag];
+          sum += a * b;
+          normA += a * a;
+          normB += b * b;
+        }
+        const correlation = sum / Math.sqrt((normA * normB) || 1);
+        if (correlation > bestCorrelation) {
+          bestCorrelation = correlation;
+          bestLag = lag;
+        }
+      }
+
+      if (bestLag < 0 || bestCorrelation < 0.72) return null;
+
+      const previous = bestLag > minLag ? correlationAt(buffer, bestLag - 1) : bestCorrelation;
+      const next = bestLag < maxLag ? correlationAt(buffer, bestLag + 1) : bestCorrelation;
+      const denominator = 2 * (2 * bestCorrelation - previous - next);
+      const shift = denominator ? (next - previous) / denominator : 0;
+      return sampleRate / (bestLag + shift);
+    }
+
+    function correlationAt(buffer, lag) {
+      let sum = 0;
+      let normA = 0;
+      let normB = 0;
+      const limit = buffer.length - lag;
+      for (let i = 0; i < limit; i++) {
+        const a = buffer[i];
+        const b = buffer[i + lag];
+        sum += a * b;
+        normA += a * a;
+        normB += b * b;
+      }
+      return sum / Math.sqrt((normA * normB) || 1);
+    }
+
+    function getTarget(frequency, detected) {
+      if (targetKey !== 'auto') return STANDARD[targetKey];
+      const entries = Object.values(STANDARD);
+      return entries.reduce((closest, current) => {
+        return Math.abs(current.frequency - frequency) < Math.abs(closest.frequency - frequency) ? current : closest;
+      }, entries[0]);
+    }
+
+    function updateDisplay(frequency) {
+      const detected = frequencyToNote(frequency);
+      const target = getTarget(frequency, detected);
+      const targetFrequency = targetKey === 'auto' ? noteToFrequency(detected.note) : target.frequency;
+      const cents = Math.round(1200 * Math.log2(frequency / targetFrequency));
+      const boundedCents = Math.max(-50, Math.min(50, cents));
+      const angle = boundedCents * 1.15;
+      const inTune = Math.abs(cents) <= 5;
+
+      needle.style.transform = `translateX(-50%) rotate(${angle}deg)`;
+      dialCenter.textContent = detected.name;
+      centsValue.textContent = cents > 0 ? `+${cents}` : cents;
+      frequencyLabel.textContent = `${frequency.toFixed(1)} Hz`;
+
+      const frenchName = FRENCH_NAMES[detected.name] || detected.name;
+      const currentString = targetKey === 'auto' ? `${frenchName}${detected.octave}` : target.label;
+      targetName.textContent = targetKey === 'auto' ? `Détection · ${currentString}` : `${target.string} · ${target.label}`;
+
+      if (inTune) {
+        noteState.innerHTML = '<strong>Parfaitement accordée</strong>';
+        centsValue.style.color = 'var(--mint-deep)';
+      } else if (cents < 0) {
+        noteState.innerHTML = 'Tendez légèrement la corde';
+        centsValue.style.color = 'var(--rose-deep)';
+      } else {
+        noteState.innerHTML = 'Détendez légèrement la corde';
+        centsValue.style.color = 'var(--rose-deep)';
+      }
+    }
+
+    function resetDisplay(message = 'Jouez une corde pour commencer') {
+      needle.style.transform = 'translateX(-50%) rotate(0deg)';
+      dialCenter.textContent = '—';
+      centsValue.textContent = '0';
+      centsValue.style.color = 'var(--ink)';
+      frequencyLabel.textContent = '440 Hz';
+      noteState.innerHTML = message;
+    }
+
+    function listen() {
+      if (!isListening || !analyser) return;
+      const buffer = new Float32Array(analyser.fftSize);
+      analyser.getFloatTimeDomainData(buffer);
+      const frequency = detectPitch(buffer, audioContext.sampleRate);
+      if (frequency && frequency >= 55 && frequency <= 700) updateDisplay(frequency);
+      animationFrame = requestAnimationFrame(listen);
+    }
+
+    async function startTuner() {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false }
+        });
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        await audioContext.resume();
+        analyser = audioContext.createAnalyser();
+        analyser.fftSize = 4096;
+        analyser.smoothingTimeConstant = 0.15;
+        microphone = audioContext.createMediaStreamSource(stream);
+        microphone.connect(analyser);
+        isListening = true;
+        if (statusPill) statusPill.classList.add('live');
+        if (statusText) statusText.textContent = 'Microphone actif';
+        startButton.textContent = 'Arrêter l’accordeur';
+        startButton.classList.add('stop');
+        resetDisplay('Jouez une corde pour commencer');
+        listen();
+      } catch (error) {
+        if (statusText) statusText.textContent = 'Microphone indisponible';
+        noteState.innerHTML = 'Autorisez le microphone, puis réessayez';
+        startButton.textContent = 'Réessayer';
+      }
+    }
+
+    function stopTuner() {
+      isListening = false;
+      if (animationFrame) cancelAnimationFrame(animationFrame);
+      if (microphone && microphone.mediaStream) microphone.mediaStream.getTracks().forEach(track => track.stop());
+      if (audioContext) audioContext.close();
+      microphone = null;
+      analyser = null;
+      audioContext = null;
+      if (statusPill) statusPill.classList.remove('live');
+      if (statusText) statusText.textContent = 'Prêt à écouter';
+      startButton.textContent = 'Autoriser le microphone';
+      startButton.classList.remove('stop');
+      resetDisplay('Appuyez sur <strong>Démarrer</strong> pour commencer');
+    }
+
+    startButton.addEventListener('click', () => isListening ? stopTuner() : startTuner());
+
+    stringButtons.forEach(button => {
+      button.addEventListener('click', () => {
+        stringButtons.forEach(item => item.classList.remove('active'));
+        button.classList.add('active');
+        targetKey = button.dataset.note === 'Auto' ? 'auto' : button.dataset.note;
+        if (targetKey === 'auto') {
+          targetName.textContent = 'Mode automatique';
+        } else {
+          const target = STANDARD[targetKey];
+          targetName.textContent = `${target.string} · ${target.label}`;
+        }
+        if (!isListening) resetDisplay('Jouez une corde pour commencer');
+      });
+    });
+  </script>
+</body>
+</html>
